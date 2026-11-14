@@ -6,19 +6,16 @@
 <title>스타듀밸리 모드 목록 정리기</title>
 <style>
   :root{
-    --bg:#f6f1e7; --card:#fffdf8; --ink:#3a3226; --muted:#8a7e6b; --line:#e4dac6;
-    --accent:#5b8a4a; --accent-d:#476d39; --warn:#b5651d; --chip:#ece4d1;
-  }
-  @media (prefers-color-scheme: dark){
-    :root{ --bg:#1f1c17; --card:#292520; --ink:#eee6d6; --muted:#a09681; --line:#3c362c; --accent:#7fb069; --accent-d:#9acb82; --warn:#e0a060; --chip:#363027; }
+    --bg:#ffffff; --card:#ffffff; --ink:#1f2a37; --muted:#6b7a8d; --line:#dbe6f3;
+    --accent:#3b8df0; --accent-d:#1f6fd1; --warn:#d9822b; --chip:#eaf3fe; --soft:#f5f9ff;
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;line-height:1.55}
   .wrap{max-width:980px;margin:0 auto;padding:28px 16px 48px}
   h1{font-size:22px;margin:0 0 4px}
   .sub{color:var(--muted);font-size:14px;margin:0 0 20px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px}
-  textarea{width:100%;min-height:170px;resize:vertical;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);padding:10px;font:12.5px/1.45 ui-monospace,Menlo,Consolas,monospace}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px;box-shadow:0 2px 10px rgba(59,141,240,.07)}
+  textarea{width:100%;min-height:170px;resize:vertical;border:1px solid var(--line);border-radius:10px;background:var(--soft);color:var(--ink);padding:10px;font:12.5px/1.45 ui-monospace,Menlo,Consolas,monospace}
   textarea:focus,input:focus{outline:2px solid var(--accent);outline-offset:1px}
   .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
   button{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--chip);color:var(--ink);padding:7px 14px;border-radius:9px;cursor:pointer}
@@ -42,18 +39,23 @@
   .badge.ok{background:var(--accent);color:#fff}
   .links a{color:var(--accent-d);margin-right:10px;white-space:nowrap}
   .links .edit{font-size:12px;padding:1px 7px;border-radius:7px}
-  .links input{width:100%;min-width:200px;margin-top:4px;padding:5px 8px;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--ink);font-size:13px}
+  .links input{width:100%;min-width:200px;margin-top:4px;padding:5px 8px;border:1px solid var(--line);border-radius:7px;background:var(--soft);color:var(--ink);font-size:13px}
   .empty{color:var(--muted);text-align:center;padding:28px 8px;font-size:14px}
   footer{text-align:center;color:var(--muted);font-size:12.5px;margin-top:24px}
   #clipbox{position:fixed;left:-9999px;top:0}
+  #dropveil{position:fixed;inset:0;background:rgba(59,141,240,.15);border:4px dashed var(--accent);display:none;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:var(--accent-d);z-index:50;pointer-events:none}
+  #dropveil.on{display:flex}
+  .dropzone{background:var(--soft);border:2px dashed #b9d4f5;border-radius:10px;padding:14px;text-align:center;color:var(--muted);font-size:14px;margin-bottom:10px;cursor:pointer}
+  .dropzone:hover{border-color:var(--accent);color:var(--accent-d)}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>🌾 스타듀밸리 모드 목록 정리기</h1>
+  <h1 style="color:var(--accent-d)">스타듀밸리 모드 목록 정리기</h1>
   <p class="sub">SMAPI 로그를 붙여넣으면 모드 이름 · 버전 · 제작자 · 링크를 표로 정리해 줘요. 모든 처리는 이 페이지 안에서만 이루어지고, 로그는 어디로도 전송되지 않아요.</p>
 
   <div class="card">
+    <div class="dropzone" id="dz">📂 SMAPI-latest.txt 파일을 여기로 끌어다 놓거나, 클릭해서 고르세요</div>
     <textarea id="log" placeholder="여기에 SMAPI 로그를 붙여넣기 (Ctrl+V)&#10;&#10;[20:47:12 INFO  SMAPI] Loaded 3 mods:&#10;[20:47:12 INFO  SMAPI]    Content Patcher 2.4.0 by Pathoschild | ..."></textarea>
     <div class="row">
       <button class="primary" id="go">표로 정리하기</button>
@@ -92,6 +94,7 @@
   <footer>© 2026 zzingae. All rights reserved.</footer>
 </div>
 <div id="clipbox"></div>
+<div id="dropveil">📂 놓으면 바로 정리돼요</div>
 
 <script>
 (function(){
@@ -325,6 +328,7 @@
     $('result').scrollIntoView({behavior:'smooth', block:'start'});
   }
 
+  $('dz').addEventListener('click', function(){ $('file').click(); });
   $('go').addEventListener('click', run);
   $('clear').addEventListener('click', function(){ $('log').value=''; mods=[]; $('result').hidden=true; });
   $('incPacks').addEventListener('change', function(){ if(mods.length) render(); });
@@ -339,11 +343,33 @@
     copyText(keys.map(function(k){ return '    '+JSON.stringify(k)+': '+JSON.stringify(s[k])+','; }).join('\n'),
       '복사했어요! MODS_DB 안에 붙여넣으세요.');
   });
-  $('file').addEventListener('change', function(e){
-    var f = e.target.files[0]; if(!f) return;
+  function readLogFile(f){
+    if(!f) return;
     var r = new FileReader();
-    r.onload = function(){ $('log').value = r.result; run(); };
-    r.readAsText(f);
+    r.onload = function(){ $('log').value = r.result; run(); say(f.name + ' 불러왔어요.'); };
+    r.onerror = function(){ say('파일을 읽지 못했어요.'); };
+    r.readAsText(f, 'UTF-8');
+  }
+  $('file').addEventListener('change', function(e){
+    readLogFile(e.target.files[0]);
+    e.target.value = '';   // 같은 파일을 다시 골라도 동작하게
+  });
+
+  // 파일 드래그 앤 드롭 (페이지 어디에 놓아도 됨)
+  var dragDepth = 0;
+  function hasFiles(e){ return e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], 'Files') > -1; }
+  document.addEventListener('dragenter', function(e){
+    if(!hasFiles(e)) return; e.preventDefault(); dragDepth++; $('dropveil').classList.add('on');
+  });
+  document.addEventListener('dragover', function(e){ if(hasFiles(e)) e.preventDefault(); });
+  document.addEventListener('dragleave', function(e){
+    if(!hasFiles(e)) return; dragDepth = Math.max(0, dragDepth-1);
+    if(!dragDepth) $('dropveil').classList.remove('on');
+  });
+  document.addEventListener('drop', function(e){
+    if(!hasFiles(e)) return;
+    e.preventDefault(); dragDepth = 0; $('dropveil').classList.remove('on');
+    readLogFile(e.dataTransfer.files[0]);
   });
   $('log').addEventListener('paste', function(){ setTimeout(function(){ if($('log').value.trim()) run(); }, 50); });
 
