@@ -27,6 +27,11 @@
   .msg{font-size:13px;color:var(--accent-d);min-height:18px}
   .tip{font-size:13px;color:var(--muted);margin:8px 0 0}
   .stat{font-size:14px;margin:0 0 10px}
+  .tabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
+  .tab{border-radius:99px;padding:6px 14px;background:var(--soft);font-size:13.5px}
+  .tab .cnt{display:inline-block;margin-left:4px;font-size:12px;color:var(--muted)}
+  .tab.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  .tab.on .cnt{color:#fff}
   .stat b{color:var(--accent-d)}
   .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
   table{border-collapse:collapse;width:100%;font-size:14px;background:var(--card)}
@@ -73,6 +78,7 @@
 
   <div class="card" id="result" hidden>
     <p class="stat" id="stat"></p>
+    <div class="tabs" id="tabs"></div>
     <div class="row" style="margin:0 0 12px">
       <button class="primary" id="copyRich">티스토리용 표 복사</button>
       <button id="copyHtml">티스토리 HTML 코드 복사</button>
@@ -88,7 +94,7 @@
         <tbody id="tbody"></tbody>
       </table>
     </div>
-    <p class="tip">링크를 못 찾은 모드는 <b>(찾지 못함)</b>으로 표시돼요. 연필(✎) 버튼으로 주소를 넣고 Enter를 누르면 복사할 때 반영되고, 이 브라우저에 저장돼서 다음부터는 자동으로 채워져요.</p>
+    <p class="tip">복사 버튼은 <b>지금 보고 있는 탭</b>의 목록만 복사해요(예: "못 찾은 모드" 탭에서 복사하면 못 찾은 것만). 링크를 못 찾은 모드는 <b>(찾지 못함)</b>으로 표시돼요. 연필(✎) 버튼으로 주소를 넣고 Enter를 누르면 복사할 때 반영되고, 이 브라우저에 저장돼서 다음부터는 자동으로 채워져요.</p>
   </div>
 
   <footer>© 2026 zzingae. All rights reserved.</footer>
@@ -524,23 +530,38 @@
     if(m.exact) return '정확한 링크';
     return '';
   }
-  function visible(){
+  var filt = 'all';   // 'all' | 'found' | 'missing'
+  function baseList(){
     var inc = $('incPacks').checked;
     return mods.filter(function(m){ return inc || m.kind === '모드'; });
+  }
+  function visible(){
+    var b = baseList();
+    if(filt === 'found') return b.filter(function(m){ return !!finalUrl(m); });
+    if(filt === 'missing') return b.filter(function(m){ return !finalUrl(m); });
+    return b;
   }
   function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
 
   function render(){
-    var list = visible();
+    var base = baseList(), list = visible();
     $('result').hidden = false;
-    var nm = list.filter(function(m){return m.kind==='모드';}).length;
-    var np = list.length - nm;
-    var ne = list.filter(function(m){return m.exact||m.custom;}).length;
-    $('stat').innerHTML = list.length
-      ? '모드 <b>'+nm+'</b>개' + (np ? ' · 콘텐츠 팩 <b>'+np+'</b>개' : '') + ' · 정확한 링크 <b>'+ne+'</b>개'
+    var nf = base.filter(function(m){ return !!finalUrl(m); }).length;
+    var counts = { all: base.length, found: nf, missing: base.length - nf };
+    var nm = base.filter(function(m){return m.kind==='모드';}).length;
+    var np = base.length - nm;
+    $('stat').innerHTML = base.length
+      ? '모드 <b>'+nm+'</b>개' + (np ? ' · 콘텐츠 팩 <b>'+np+'</b>개' : '')
       : '';
-    if(!list.length){
+    $('tabs').innerHTML = [['all','전체'],['found','링크 찾은 모드'],['missing','못 찾은 모드']].map(function(t){
+      return '<button type="button" class="tab'+(filt===t[0]?' on':'')+'" data-f="'+t[0]+'">'+t[1]+' <span class="cnt">'+counts[t[0]]+'</span></button>';
+    }).join('');
+    if(!base.length){
       $('tbody').innerHTML = '<tr><td colspan="5" class="empty">모드 목록을 찾지 못했어요. SMAPI 로그 전체를 붙여넣었는지 확인해 주세요. ("Loaded N mods:" 부분이 필요해요)</td></tr>';
+      return;
+    }
+    if(!list.length){
+      $('tbody').innerHTML = '<tr><td colspan="5" class="empty">'+(filt==='missing' ? '링크를 못 찾은 모드가 없어요 🎉' : '해당하는 모드가 없어요.')+'</td></tr>';
       return;
     }
     $('tbody').innerHTML = list.map(function(m, i){
@@ -647,13 +668,20 @@
     var t = $('log').value;
     if(!t.trim()){ say('로그를 먼저 붙여넣어 주세요.'); return; }
     mods = parse(t);
+    filt = 'all';
     render();
     $('result').scrollIntoView({behavior:'smooth', block:'start'});
   }
 
   $('dz').addEventListener('click', function(){ $('file').click(); });
+  $('tabs').addEventListener('click', function(e){
+    var b = e.target.closest('button.tab');
+    if(!b) return;
+    filt = b.dataset.f;
+    render();
+  });
   $('go').addEventListener('click', run);
-  $('clear').addEventListener('click', function(){ $('log').value=''; mods=[]; $('result').hidden=true; });
+  $('clear').addEventListener('click', function(){ $('log').value=''; mods=[]; filt='all'; $('result').hidden=true; });
   $('incPacks').addEventListener('change', function(){ if(mods.length) render(); });
   $('copyRich').addEventListener('click', function(){ if(visible().length) copyRich('tistory'); });
   $('copyHtml').addEventListener('click', function(){ if(visible().length) copyText(cleanTable('tistory'), 'HTML 코드를 복사했어요! 티스토리 HTML 모드에 붙여넣기 하세요.'); });
@@ -762,6 +790,7 @@
       return f.text().then(function(t){ try{ return JSON.parse(stripJson(t)); }catch(e){ return null; } }, function(){ return null; });
     })).then(function(list){
       mods = fromManifests(list);
+      filt = 'all';
       render();
       var ne = mods.filter(function(m){ return m.exact || m.custom; }).length;
       say('manifest ' + files.length + '개를 읽었어요 · 링크 ' + ne + '/' + mods.length + '개 자동 채움');
