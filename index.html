@@ -55,16 +55,19 @@
   <p class="sub">SMAPI 로그를 붙여넣으면 모드 이름 · 버전 · 제작자 · 링크를 표로 정리해 줘요. 모든 처리는 이 페이지 안에서만 이루어지고, 로그는 어디로도 전송되지 않아요.</p>
 
   <div class="card">
-    <div class="dropzone" id="dz">📂 SMAPI-latest.txt 파일을 여기로 끌어다 놓거나, 클릭해서 고르세요</div>
+    <div class="dropzone" id="dz">📂 SMAPI-latest.txt 파일이나 <b>Mods 폴더</b>를 여기로 끌어다 놓으세요 (클릭하면 로그 파일 선택)</div>
     <textarea id="log" placeholder="여기에 SMAPI 로그를 붙여넣기 (Ctrl+V)&#10;&#10;[20:47:12 INFO  SMAPI] Loaded 3 mods:&#10;[20:47:12 INFO  SMAPI]    Content Patcher 2.4.0 by Pathoschild | ..."></textarea>
     <div class="row">
       <button class="primary" id="go">표로 정리하기</button>
       <label class="chk" for="file" style="cursor:pointer"><button type="button" onclick="document.getElementById('file').click()">로그 파일 열기</button></label>
       <input type="file" id="file" accept=".txt,.log" hidden>
+      <button type="button" id="pickDir">Mods 폴더 불러오기</button>
+      <input type="file" id="dir" webkitdirectory multiple hidden>
       <button id="clear">지우기</button>
       <span class="spacer"></span>
       <label class="chk"><input type="checkbox" id="incPacks" checked> 콘텐츠 팩 포함</label>
     </div>
+    <p class="tip">💡 <b>Mods 폴더</b>를 불러오면 각 모드의 manifest.json에 적힌 업데이트 키(Nexus 번호 등)로 <b>링크가 자동으로 채워져요</b>. 폴더 안의 manifest.json 파일만 읽고, 어디로도 전송되지 않아요.</p>
     <p class="tip">로그 위치: <code>%appdata%\StardewValley\ErrorLogs\SMAPI-latest.txt</code> (Windows) · 게임을 한 번 실행하고 모드가 다 로드된 뒤의 로그를 쓰세요.</p>
   </div>
 
@@ -164,8 +167,41 @@
     "log menu": "https://www.nexusmods.com/stardewvalley/mods/19919",
     "unique response core": "https://www.curseforge.com/stardewvalley/mods/miss-coriels-unique-courtship-response-core",
     "happybirthday sds chinese contentpack": "https://www.nexusmods.com/stardewvalley/mods/30357",
-    "simple foliage - ridgeside village": "https://www.nexusmods.com/stardewvalley/mods/42292"
+    "simple foliage - ridgeside village": "https://www.nexusmods.com/stardewvalley/mods/42292",
+    "mail framework mod": "https://www.nexusmods.com/stardewvalley/mods/1536",
+    "map editor extended": "https://www.nexusmods.com/stardewvalley/mods/18387",
+    "mapping extensions and extra properties (meep)": "https://www.nexusmods.com/stardewvalley/mods/14493",
+    "mh quest manager": "https://www.nexusmods.com/stardewvalley/mods/40551",
+    "misc map actions & properties": "https://www.nexusmods.com/stardewvalley/mods/28423",
+    "mistycore": "https://www.nexusmods.com/stardewvalley/mods/41330",
+    "no greenhouse entrance tiles": "https://www.nexusmods.com/stardewvalley/mods/21557",
+    "noclip mode": "https://www.nexusmods.com/stardewvalley/mods/3900",
+    "npc map locations": "https://www.nexusmods.com/stardewvalley/mods/239",
+    "npc tokens": "https://www.nexusmods.com/stardewvalley/mods/23637",
+    "one tile high budget tv": "https://www.nexusmods.com/stardewvalley/mods/11781",
+    "outfit studio": "https://www.nexusmods.com/stardewvalley/mods/42090",
+    "perfection exclusions": "https://www.nexusmods.com/stardewvalley/mods/31247",
+    "pif - personal rooms": "https://www.nexusmods.com/stardewvalley/mods/20537",
+    "pony weight loss program": "https://www.nexusmods.com/stardewvalley/mods/1232",
+    "portraiture": "https://www.nexusmods.com/stardewvalley/mods/999",
+    "portraitureplus": "https://www.nexusmods.com/stardewvalley/mods/24534",
+    "precise furniture": "https://www.nexusmods.com/stardewvalley/mods/23488",
+    "producer framework mod": "https://www.nexusmods.com/stardewvalley/mods/4970",
+    "reciprocate": "https://www.nexusmods.com/stardewvalley/mods/17714",
+    "ridgeside village (smapi component)": "https://www.nexusmods.com/stardewvalley/mods/7286",
+    "secret note framework": "https://www.nexusmods.com/stardewvalley/mods/25055",
+    "sevendeadlysins-smapi": "https://www.nexusmods.com/stardewvalley/mods/15100",
+    "sit for stamina": "https://www.nexusmods.com/stardewvalley/mods/7334",
+    "spacecore": "https://www.nexusmods.com/stardewvalley/mods/1348",
+    "stardew aquarium code": "https://www.nexusmods.com/stardewvalley/mods/6372",
+    "stardewhack": "https://www.nexusmods.com/stardewvalley/mods/3213",
+    "store entrance doorbells": "https://www.nexusmods.com/stardewvalley/mods/34540"
   };
+  // 표시 이름 보정: 링크 조회는 원래 이름으로 하고, 표에는 보정된 이름·제작자를 보여줘요.
+  var NAME_FIX = {
+    "sevendeadlysins-smapi": { name: "Seven Deadly Sins", author: "ricehit" }
+  };
+  function tidyName(n){ return n.replace(/:\s*C#$/i,'').replace(/\s+Code$/i,'').trim(); }
   var NOT_FOUND = '(찾지 못함)';
   var STORE_KEY = 'sdv-mod-table-links';
 
@@ -241,7 +277,8 @@
       seen[key] = 1;
       var name = m[1].trim(), key2 = name.toLowerCase();
       var url = updates[key2] || MODS_DB[key2] || null;
-      out.push({ name:name, ver:m[2], author:m[3].trim(), kind:k, url:url, exact:!!url, custom:saved[key2] || '' });
+      var fix = NAME_FIX[key2] || {};
+      out.push({ key:key2, name:fix.name || tidyName(name), ver:m[2], author:fix.author || m[3].trim(), kind:k, url:url, exact:!!url, custom:saved[key2] || '' });
     }
     return out;
   }
@@ -304,7 +341,7 @@
     if(v && !/^https?:\/\//i.test(v)) v = 'https://' + v;
     var mm = mods[+inp.dataset.in];
     mm.custom = v;
-    saveLink(mm.name, v);
+    saveLink(mm.key, v);
     render();
   });
 
@@ -406,6 +443,105 @@
     e.target.value = '';   // 같은 파일을 다시 골라도 동작하게
   });
 
+
+  // ───────── Mods 폴더(manifest.json) 읽기 ─────────
+  // manifest.json은 주석·끝 쉼표가 있는 경우가 있어서 너그럽게 읽어요
+  function stripJson(t){
+    t = t.replace(/^﻿/, '');
+    var out = '', i = 0, inStr = false;
+    while(i < t.length){
+      var c = t[i], n = t[i+1];
+      if(inStr){
+        out += c;
+        if(c === '\\'){ out += (t[i+1] || ''); i += 2; continue; }
+        if(c === '"') inStr = false;
+        i++; continue;
+      }
+      if(c === '"'){ inStr = true; out += c; i++; continue; }
+      if(c === '/' && n === '/'){ while(i < t.length && t[i] !== '\n') i++; continue; }
+      if(c === '/' && n === '*'){ i += 2; while(i < t.length && !(t[i] === '*' && t[i+1] === '/')) i++; i += 2; continue; }
+      out += c; i++;
+    }
+    return out.replace(/,(\s*[}\]])/g, '$1');
+  }
+  // UpdateKeys 예: "Nexus:1915", "Nexus:1915@alpha", "ModDrop:1234", "GitHub:user/repo"
+  function linkFromKeys(keys){
+    if(!Array.isArray(keys)) return null;
+    var found = {};
+    keys.forEach(function(k){
+      var m = String(k).match(/^\s*(\w+)\s*:\s*(.+?)\s*$/);
+      if(!m) return;
+      var site = m[1].toLowerCase(), id = m[2].split('@')[0].trim();
+      if(id && !found[site]) found[site] = id;
+    });
+    if(found.nexus && /^\d+$/.test(found.nexus)) return 'https://www.nexusmods.com/stardewvalley/mods/' + found.nexus;
+    if(found.moddrop && /^\d+$/.test(found.moddrop)) return 'https://www.moddrop.com/stardew-valley/mods/' + found.moddrop;
+    if(found.github && /^[\w.-]+\/[\w.-]+$/.test(found.github)) return 'https://github.com/' + found.github;
+    return null;
+  }
+  function fromManifests(list){
+    var saved = loadSaved(), out = [], seen = {};
+    list.forEach(function(mf){
+      if(!mf || typeof mf.Name !== 'string' || !mf.Name.trim()) return;
+      var name = mf.Name.trim(), key = name.toLowerCase();
+      var author = String(mf.Author || '').trim(), ver = String(mf.Version || '').trim();
+      var dk = key + '|' + author.toLowerCase() + '|' + ver;
+      if(seen[dk]) return; seen[dk] = 1;
+      var url = MODS_DB[key] || linkFromKeys(mf.UpdateKeys) || null;
+      var fix = NAME_FIX[key] || {};
+      out.push({ key:key, name:fix.name || tidyName(name), ver:ver || '-', author:fix.author || author || '-',
+        kind: mf.ContentPackFor ? '콘텐츠 팩' : '모드', url:url, exact:!!url, custom:saved[key] || '' });
+    });
+    out.sort(function(a,b){ return a.name.toLowerCase() < b.name.toLowerCase() ? -1 : 1; });
+    return out;
+  }
+  function okPath(path){
+    // 점(.)으로 시작하는 폴더는 SMAPI도 무시해요
+    return String(path).split('/').every(function(s){ return !(s.charAt(0) === '.' && s.length > 1); });
+  }
+  function walkEntry(en, depth, acc){
+    return new Promise(function(resolve){
+      if(en.isFile){
+        if(en.name.toLowerCase() === 'manifest.json' && okPath(en.fullPath || '')){
+          en.file(function(f){ acc.push(f); resolve(); }, function(){ resolve(); });
+        } else resolve();
+        return;
+      }
+      if(depth > 0 && en.name.charAt(0) === '.'){ resolve(); return; }
+      var rd = en.createReader(), all = [];
+      (function read(){
+        rd.readEntries(function(ents){
+          if(!ents.length){
+            Promise.all(all.map(function(x){ return walkEntry(x, depth+1, acc); })).then(function(){ resolve(); });
+            return;
+          }
+          all = all.concat(Array.prototype.slice.call(ents));
+          read();
+        }, function(){ resolve(); });
+      })();
+    });
+  }
+  function loadManifests(files){
+    if(!files.length){ $('result').hidden = false; render(); say('manifest.json을 찾지 못했어요. Stardew Valley/Mods 폴더가 맞는지 확인해 주세요.'); return; }
+    Promise.all(files.map(function(f){
+      return f.text().then(function(t){ try{ return JSON.parse(stripJson(t)); }catch(e){ return null; } }, function(){ return null; });
+    })).then(function(list){
+      mods = fromManifests(list);
+      render();
+      var ne = mods.filter(function(m){ return m.exact || m.custom; }).length;
+      say('manifest ' + files.length + '개를 읽었어요 · 링크 ' + ne + '/' + mods.length + '개 자동 채움');
+      $('result').scrollIntoView({behavior:'smooth', block:'start'});
+    });
+  }
+  $('pickDir').addEventListener('click', function(){ $('dir').click(); });
+  $('dir').addEventListener('change', function(e){
+    var fs = Array.prototype.slice.call(e.target.files || []).filter(function(f){
+      return f.name.toLowerCase() === 'manifest.json' && okPath(f.webkitRelativePath || '');
+    });
+    loadManifests(fs);
+    e.target.value = '';
+  });
+
   // 파일 드래그 앤 드롭 (페이지 어디에 놓아도 됨)
   var dragDepth = 0;
   function hasFiles(e){ return e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], 'Files') > -1; }
@@ -420,7 +556,21 @@
   document.addEventListener('drop', function(e){
     if(!hasFiles(e)) return;
     e.preventDefault(); dragDepth = 0; $('dropveil').classList.remove('on');
-    readLogFile(e.dataTransfer.files[0]);
+    var dt = e.dataTransfer, dirs = [];
+    // 폴더는 drop 이벤트 안에서 바로 entry를 꺼내 둬야 해요
+    if(dt.items){
+      for(var i=0;i<dt.items.length;i++){
+        var en = dt.items[i].webkitGetAsEntry ? dt.items[i].webkitGetAsEntry() : null;
+        if(en && en.isDirectory) dirs.push(en);
+      }
+    }
+    if(dirs.length){
+      say('폴더를 읽는 중이에요…');
+      var acc = [];
+      Promise.all(dirs.map(function(d){ return walkEntry(d, 0, acc); })).then(function(){ loadManifests(acc); });
+    }else{
+      readLogFile(dt.files[0]);
+    }
   });
   $('log').addEventListener('paste', function(){ setTimeout(function(){ if($('log').value.trim()) run(); }, 50); });
 
