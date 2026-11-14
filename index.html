@@ -75,6 +75,7 @@
       <button id="copyHtml">티스토리 HTML 코드 복사</button>
       <button id="copyNaver">네이버 블로그·카페용 표 복사</button>
       <button id="copyTsv">엑셀/시트용 복사</button>
+      <button id="copyDb">✎로 넣은 링크 코드용 복사</button>
       <button id="copyMd">마크다운 복사</button>
       <span class="msg" id="msg"></span>
     </div>
@@ -84,11 +85,7 @@
         <tbody id="tbody"></tbody>
       </table>
     </div>
-    <p class="tip">링크를 못 찾은 모드는 <b>(찾지 못함)</b>으로 표시돼요. 연필(✎) 버튼으로 주소를 직접 넣으면 복사할 때 반영되고, 이 브라우저에 저장돼서 다음부터는 자동으로 채워져요.</p>
-    <div class="row" style="margin-top:8px">
-      <button id="copyDb">저장해 둔 링크를 코드용으로 복사</button>
-      <span class="tip" style="margin:0">→ <code>index.html</code>의 <code>MODS_DB</code>에 붙여넣으면 어느 브라우저에서나 내장돼요.</span>
-    </div>
+    <p class="tip">링크를 못 찾은 모드는 <b>(찾지 못함)</b>으로 표시돼요. 연필(✎) 버튼으로 주소를 넣고 Enter를 누르면 복사할 때 반영되고, 이 브라우저에 저장돼서 다음부터는 자동으로 채워져요.</p>
   </div>
 
   <footer>© 2026 zzingae. All rights reserved.</footer>
@@ -189,7 +186,7 @@
     var m = line.match(/^\[[^\]]*\]\s?/);
     return m ? {text: line.slice(m[0].length), had: true} : {text: line, had: false};
   }
-  var ITEM = /^(.+?) (\S+) by (.+?)(?: \| (.*))?$/;
+  var ITEM = /^(.+?) (v?\d\S*) by (.+?)(?: \| (.*))?$/i;
 
   function hostLabel(u){
     try{
