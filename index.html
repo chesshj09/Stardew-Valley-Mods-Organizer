@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>스타듀밸리 모드 목록 정리기</title>
+<style>
+  :root{
+    --bg:#f6f1e7; --card:#fffdf8; --ink:#3a3226; --muted:#8a7e6b; --line:#e4dac6;
+    --accent:#5b8a4a; --accent-d:#476d39; --warn:#b5651d; --chip:#ece4d1;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#1f1c17; --card:#292520; --ink:#eee6d6; --muted:#a09681; --line:#3c362c; --accent:#7fb069; --accent-d:#9acb82; --warn:#e0a060; --chip:#363027; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;line-height:1.55}
+  .wrap{max-width:980px;margin:0 auto;padding:28px 16px 48px}
+  h1{font-size:22px;margin:0 0 4px}
+  .sub{color:var(--muted);font-size:14px;margin:0 0 20px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px}
+  textarea{width:100%;min-height:170px;resize:vertical;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);padding:10px;font:12.5px/1.45 ui-monospace,Menlo,Consolas,monospace}
+  textarea:focus,input:focus{outline:2px solid var(--accent);outline-offset:1px}
+  .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+  button{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--chip);color:var(--ink);padding:7px 14px;border-radius:9px;cursor:pointer}
+  button:hover{border-color:var(--accent)}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  button.primary:hover{background:var(--accent-d)}
+  label.chk{font-size:13.5px;color:var(--muted);display:flex;gap:6px;align-items:center;cursor:pointer}
+  .spacer{flex:1}
+  .msg{font-size:13px;color:var(--accent-d);min-height:18px}
+  .tip{font-size:13px;color:var(--muted);margin:8px 0 0}
+  .stat{font-size:14px;margin:0 0 10px}
+  .stat b{color:var(--accent-d)}
+  .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+  table{border-collapse:collapse;width:100%;font-size:14px;background:var(--card)}
+  th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+  th{background:var(--chip);font-size:13px;white-space:nowrap;position:sticky;top:0}
+  tr:last-child td{border-bottom:0}
+  td.n{color:var(--muted);width:36px}
+  td.v{white-space:nowrap;color:var(--muted)}
+  .badge{display:inline-block;font-size:11px;padding:1px 7px;border-radius:99px;background:var(--chip);color:var(--muted);margin-left:6px;white-space:nowrap}
+  .badge.ok{background:var(--accent);color:#fff}
+  .links a{color:var(--accent-d);margin-right:10px;white-space:nowrap}
+  .links .edit{font-size:12px;padding:1px 7px;border-radius:7px}
+  .links input{width:100%;min-width:200px;margin-top:4px;padding:5px 8px;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--ink);font-size:13px}
+  .empty{color:var(--muted);text-align:center;padding:28px 8px;font-size:14px}
+  footer{text-align:center;color:var(--muted);font-size:12.5px;margin-top:24px}
+  #clipbox{position:fixed;left:-9999px;top:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🌾 스타듀밸리 모드 목록 정리기</h1>
+  <p class="sub">SMAPI 로그를 붙여넣으면 모드 이름 · 버전 · 제작자 · 링크를 표로 정리해 줘요. 모든 처리는 이 페이지 안에서만 이루어지고, 로그는 어디로도 전송되지 않아요.</p>
+
+  <div class="card">
+    <textarea id="log" placeholder="여기에 SMAPI 로그를 붙여넣기 (Ctrl+V)&#10;&#10;[20:47:12 INFO  SMAPI] Loaded 3 mods:&#10;[20:47:12 INFO  SMAPI]    Content Patcher 2.4.0 by Pathoschild | ..."></textarea>
+    <div class="row">
+      <button class="primary" id="go">표로 정리하기</button>
+      <label class="chk" for="file" style="cursor:pointer"><button type="button" onclick="document.getElementById('file').click()">로그 파일 열기</button></label>
+      <input type="file" id="file" accept=".txt,.log" hidden>
+      <button id="clear">지우기</button>
+      <span class="spacer"></span>
+      <label class="chk"><input type="checkbox" id="incPacks" checked> 콘텐츠 팩 포함</label>
+    </div>
+    <p class="tip">로그 위치: <code>%appdata%\StardewValley\ErrorLogs\SMAPI-latest.txt</code> (Windows) · 게임을 한 번 실행하고 모드가 다 로드된 뒤의 로그를 쓰세요.</p>
+  </div>
+
+  <div class="card" id="result" hidden>
+    <p class="stat" id="stat"></p>
+    <div class="row" style="margin:0 0 12px">
+      <button class="primary" id="copyRich">티스토리용 표 복사</button>
+      <button id="copyHtml">티스토리 HTML 코드 복사</button>
+      <button id="copyNaver">네이버 블로그·카페용 표 복사</button>
+      <button id="copyTsv">엑셀/시트용 복사</button>
+      <button id="copyMd">마크다운 복사</button>
+      <span class="msg" id="msg"></span>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>#</th><th>모드 이름</th><th>버전</th><th>제작자</th><th>다운로드 링크</th></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <p class="tip">링크를 못 찾은 모드는 <b>(찾지 못함)</b>으로 표시돼요. 연필(✎) 버튼으로 주소를 직접 넣으면 복사할 때 반영되고, 이 브라우저에 저장돼서 다음부터는 자동으로 채워져요.</p>
+    <div class="row" style="margin-top:8px">
+      <button id="copyDb">저장해 둔 링크를 코드용으로 복사</button>
+      <span class="tip" style="margin:0">→ <code>index.html</code>의 <code>MODS_DB</code>에 붙여넣으면 어느 브라우저에서나 내장돼요.</span>
+    </div>
+  </div>
+
+  <footer>© 2026 zzingae. All rights reserved.</footer>
+</div>
+<div id="clipbox"></div>
+
+<script>
+(function(){
+  // ───────────────────────────────────────────────────────────
+  // ★ 내장 링크 목록: 모드 이름(소문자) → 다운로드 주소
+  //   여기에 한 줄씩 추가하면 다음부터 자동으로 정확한 링크가 들어가요.
+  //   형식:  "모드 이름 (소문자로)": "https://...",
+  // ───────────────────────────────────────────────────────────
+  var MODS_DB = {
+    "smapi": "https://www.nexusmods.com/stardewvalley/mods/2400",
+    "content patcher": "https://www.nexusmods.com/stardewvalley/mods/1915",
+    "generic mod config menu": "https://www.nexusmods.com/stardewvalley/mods/5098",
+    "stardew valley expanded": "https://www.nexusmods.com/stardewvalley/mods/3753",
+    "lookup anything": "https://www.nexusmods.com/stardewvalley/mods/541",
+    "automate": "https://www.nexusmods.com/stardewvalley/mods/1063",
+    "chests anywhere": "https://www.nexusmods.com/stardewvalley/mods/518",
+    "ui info suite": "https://www.nexusmods.com/stardewvalley/mods/1150",
+    "cjb cheats menu": "https://www.nexusmods.com/stardewvalley/mods/4",
+    "cjb item spawner": "https://www.nexusmods.com/stardewvalley/mods/93"
+  };
+  var NOT_FOUND = '(찾지 못함)';
+  var STORE_KEY = 'sdv-mod-table-links';
+
+  // 직접 입력한 링크는 이 브라우저에 저장돼서 다음에도 자동으로 채워져요
+  function loadSaved(){
+    try{ return JSON.parse(localStorage.getItem(STORE_KEY) || '{}') || {}; }catch(e){ return {}; }
+  }
+  function saveLink(name, url){
+    var s = loadSaved(), k = name.toLowerCase();
+    if(url) s[k] = url; else delete s[k];
+    try{ localStorage.setItem(STORE_KEY, JSON.stringify(s)); }catch(e){}
+  }
+
+  var mods = [];            // {name, ver, author, kind, url, exact, custom}
+  var $ = function(id){ return document.getElementById(id); };
+
+  function stripPrefix(line){
+    var m = line.match(/^\[[^\]]*\]\s?/);
+    return m ? {text: line.slice(m[0].length), had: true} : {text: line, had: false};
+  }
+  var ITEM = /^(.+?) (\S+) by (.+?)(?: \| (.*))?$/;
+
+  function hostLabel(u){
+    try{
+      var h = new URL(u).hostname.replace(/^www\./,'');
+      if(h.indexOf('nexusmods')>-1) return 'Nexus';
+      if(h.indexOf('moddrop')>-1) return 'ModDrop';
+      if(h.indexOf('github')>-1) return 'GitHub';
+      if(h.indexOf('curseforge')>-1) return 'CurseForge';
+      return h;
+    }catch(e){ return '링크'; }
+  }
+
+  function parse(text){
+    var lines = text.replace(/\r/g,'').split('\n');
+    var out = [], seen = {}, kind = null, updates = {}, saved = loadSaved();
+
+    // 1) 업데이트 알림 줄에서 정확한 링크 수집
+    lines.forEach(function(raw){
+      var s = stripPrefix(raw).text.trim();
+      var m = s.match(/^(.+?) (\S+): (https?:\/\/\S+?)(?: \(you have.*\))?$/);
+      if(m) updates[m[1].trim().toLowerCase()] = m[3];
+    });
+
+    // 2) 모드 / 콘텐츠 팩 목록 파싱
+    lines.forEach(function(raw){
+      var p = stripPrefix(raw);
+      var hdr = p.text.match(/Loaded \d+ (mods?|content packs?)\s*:/i);
+      if(hdr){ kind = /content/i.test(hdr[1]) ? '콘텐츠 팩' : '모드'; return; }
+      if(!kind) return;
+      var body = p.text;
+      var indented = /^\s{2,}\S/.test(body);
+      var m = body.trim().match(ITEM);
+      if(m && (indented || !p.had)){
+        pushItem(m, kind);
+      } else if(p.had && !indented && body.trim()){
+        kind = null; // 다른 로그 줄을 만나면 목록 끝
+      }
+    });
+
+    // 3) 헤더를 못 찾은 경우의 대비책
+    if(!out.length){
+      lines.forEach(function(raw){
+        var p = stripPrefix(raw);
+        var m = p.text.trim().match(ITEM);
+        if(m && /^\s{2,}\S/.test(p.text) && m[4] !== undefined) pushItem(m, '모드');
+      });
+    }
+
+    function pushItem(m, k){
+      var key = (m[1]+'|'+m[3]).toLowerCase();
+      if(seen[key]) return;
+      seen[key] = 1;
+      var name = m[1].trim(), key2 = name.toLowerCase();
+      var url = updates[key2] || MODS_DB[key2] || null;
+      out.push({ name:name, ver:m[2], author:m[3].trim(), kind:k, url:url, exact:!!url, custom:saved[key2] || '' });
+    }
+    return out;
+  }
+
+  function finalUrl(m){ return m.custom || m.url || ''; }
+  function linkNote(m){
+    if(m.custom) return '직접 입력';
+    if(m.exact) return '정확한 링크';
+    return '';
+  }
+  function visible(){
+    var inc = $('incPacks').checked;
+    return mods.filter(function(m){ return inc || m.kind === '모드'; });
+  }
+  function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+
+  function render(){
+    var list = visible();
+    $('result').hidden = false;
+    var nm = list.filter(function(m){return m.kind==='모드';}).length;
+    var np = list.length - nm;
+    var ne = list.filter(function(m){return m.exact||m.custom;}).length;
+    $('stat').innerHTML = list.length
+      ? '모드 <b>'+nm+'</b>개' + (np ? ' · 콘텐츠 팩 <b>'+np+'</b>개' : '') + ' · 정확한 링크 <b>'+ne+'</b>개'
+      : '';
+    if(!list.length){
+      $('tbody').innerHTML = '<tr><td colspan="5" class="empty">모드 목록을 찾지 못했어요. SMAPI 로그 전체를 붙여넣었는지 확인해 주세요. ("Loaded N mods:" 부분이 필요해요)</td></tr>';
+      return;
+    }
+    $('tbody').innerHTML = list.map(function(m, i){
+      var idx = mods.indexOf(m);
+      var url = finalUrl(m);
+      var linkHtml = url
+        ? '<a href="'+esc(url)+'" target="_blank" rel="noopener">'+esc(hostLabel(url))+'</a><span class="badge ok">'+linkNote(m)+'</span>'
+        : '<span style="color:var(--warn)">'+NOT_FOUND+'</span>';
+      return '<tr>'
+        + '<td class="n">'+(i+1)+'</td>'
+        + '<td>'+esc(m.name)+(m.kind!=='모드'?'<span class="badge">콘텐츠 팩</span>':'')+'</td>'
+        + '<td class="v">'+esc(m.ver)+'</td>'
+        + '<td>'+esc(m.author)+'</td>'
+        + '<td class="links">'+linkHtml
+        + ' <button class="edit" data-i="'+idx+'" title="링크 직접 입력">✎</button>'
+        + '<div data-box="'+idx+'" hidden><input type="url" placeholder="https://www.nexusmods.com/stardewvalley/mods/..." data-in="'+idx+'" value="'+esc(m.custom)+'"></div></td>'
+        + '</tr>';
+    }).join('');
+  }
+
+  // 표 편집(링크 직접 입력)
+  $('tbody').addEventListener('click', function(e){
+    var b = e.target.closest('button.edit');
+    if(!b) return;
+    var box = document.querySelector('[data-box="'+b.dataset.i+'"]');
+    box.hidden = !box.hidden;
+    if(!box.hidden) box.querySelector('input').focus();
+  });
+  $('tbody').addEventListener('change', function(e){
+    var inp = e.target.closest('input[data-in]');
+    if(!inp) return;
+    var v = inp.value.trim();
+    if(v && !/^https?:\/\//i.test(v)) v = 'https://' + v;
+    var mm = mods[+inp.dataset.in];
+    mm.custom = v;
+    saveLink(mm.name, v);
+    render();
+  });
+
+  // 복사용 문자열 / 표
+  // mode 'tistory': 인라인 CSS 스타일 / 'naver': 네이버 에디터가 잘 받는 속성 방식(border, bgcolor)
+  function cleanTable(mode){
+    var list = visible(), naver = (mode === 'naver');
+    var cols = ['모드 이름','제작자','버전','다운로드 링크'];
+    var h, th, td;
+    if(naver){
+      h = '<table border="1" cellspacing="0" cellpadding="6" width="100%"><thead><tr>';
+      th = function(t){ return '<th bgcolor="#EEEEEE">'+t+'</th>'; };
+      td = function(t){ return '<td>'+t+'</td>'; };
+    }else{
+      h = '<table style="border-collapse:collapse;width:100%;font-size:14px"><thead><tr>';
+      th = function(t){ return '<th style="border:1px solid #ccc;background:#f2f2f2;padding:6px 10px;text-align:left">'+t+'</th>'; };
+      td = function(t){ return '<td style="border:1px solid #ccc;padding:6px 10px">'+t+'</td>'; };
+    }
+    h += cols.map(th).join('') + '</tr></thead><tbody>';
+    list.forEach(function(m){
+      var u = finalUrl(m);
+      h += '<tr>' + td(esc(m.name)) + td(esc(m.author)) + td(esc(m.ver))
+        + td(u ? '<a href="'+esc(u)+'">'+esc(u)+'</a>' : NOT_FOUND) + '</tr>';
+    });
+    return h + '</tbody></table>';
+  }
+  function tsv(){
+    return ['모드 이름\t제작자\t버전\t다운로드 링크'].concat(visible().map(function(m){
+      return [m.name, m.author, m.ver, finalUrl(m) || NOT_FOUND].join('\t');
+    })).join('\n');
+  }
+  function md(){
+    return ['| 모드 이름 | 제작자 | 버전 | 링크 |','|---|---|---|---|'].concat(visible().map(function(m){
+      return '| '+m.name.replace(/\|/g,'\\|')+' | '+m.author.replace(/\|/g,'\\|')+' | '+m.ver+' | '+(finalUrl(m) || NOT_FOUND)+' |';
+    })).join('\n');
+  }
+  function say(t){ $('msg').textContent = t; clearTimeout(say.t); say.t = setTimeout(function(){ $('msg').textContent=''; }, 2800); }
+
+  function copyText(text, okMsg){
+    function fallback(){
+      var ta = document.createElement('textarea');
+      ta.value = text; ta.style.position='fixed'; ta.style.left='-9999px';
+      document.body.appendChild(ta); ta.select();
+      var ok = false; try{ ok = document.execCommand('copy'); }catch(e){}
+      document.body.removeChild(ta);
+      say(ok ? okMsg : '복사가 막혀 있어요. 표를 직접 드래그해서 복사해 주세요.');
+    }
+    try{
+      navigator.clipboard.writeText(text).then(function(){ say(okMsg); }, fallback);
+    }catch(e){ fallback(); }
+  }
+  function copyRich(mode){
+    var box = $('clipbox');
+    box.innerHTML = cleanTable(mode);
+    var range = document.createRange();
+    range.selectNodeContents(box);
+    var sel = window.getSelection();
+    sel.removeAllRanges(); sel.addRange(range);
+    var ok = false;
+    try{ ok = document.execCommand('copy'); }catch(e){}
+    sel.removeAllRanges();
+    box.innerHTML = '';
+    if(ok) say(mode === 'naver' ? '표를 복사했어요! 네이버 글쓰기 창에 붙여넣기 하세요.' : '표를 복사했어요! 티스토리 글쓰기 창에 붙여넣기 하세요.');
+    else copyText(tsv(), '서식 복사가 막혀서 텍스트(탭 구분)로 복사했어요.');
+  }
+
+  function run(){
+    var t = $('log').value;
+    if(!t.trim()){ say('로그를 먼저 붙여넣어 주세요.'); return; }
+    mods = parse(t);
+    render();
+    $('result').scrollIntoView({behavior:'smooth', block:'start'});
+  }
+
+  $('go').addEventListener('click', run);
+  $('clear').addEventListener('click', function(){ $('log').value=''; mods=[]; $('result').hidden=true; });
+  $('incPacks').addEventListener('change', function(){ if(mods.length) render(); });
+  $('copyRich').addEventListener('click', function(){ if(visible().length) copyRich('tistory'); });
+  $('copyHtml').addEventListener('click', function(){ if(visible().length) copyText(cleanTable('tistory'), 'HTML 코드를 복사했어요! 티스토리 HTML 모드에 붙여넣기 하세요.'); });
+  $('copyNaver').addEventListener('click', function(){ if(visible().length) copyRich('naver'); });
+  $('copyTsv').addEventListener('click', function(){ if(visible().length) copyText(tsv(), '복사했어요! 엑셀·구글 시트에 붙여넣기 하세요.'); });
+  $('copyMd').addEventListener('click', function(){ if(visible().length) copyText(md(), '마크다운 표를 복사했어요.'); });
+  $('copyDb').addEventListener('click', function(){
+    var s = loadSaved(), keys = Object.keys(s);
+    if(!keys.length){ say('저장된 링크가 아직 없어요. ✎로 링크를 먼저 넣어 주세요.'); return; }
+    copyText(keys.map(function(k){ return '    '+JSON.stringify(k)+': '+JSON.stringify(s[k])+','; }).join('\n'),
+      '복사했어요! MODS_DB 안에 붙여넣으세요.');
+  });
+  $('file').addEventListener('change', function(e){
+    var f = e.target.files[0]; if(!f) return;
+    var r = new FileReader();
+    r.onload = function(){ $('log').value = r.result; run(); };
+    r.readAsText(f);
+  });
+  $('log').addEventListener('paste', function(){ setTimeout(function(){ if($('log').value.trim()) run(); }, 50); });
+
+  // 테스트용 노출
+  window.__parse = parse;
+})();
+</script>
+</body>
+</html>
